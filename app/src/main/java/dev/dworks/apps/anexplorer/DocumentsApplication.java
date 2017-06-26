@@ -32,6 +32,7 @@ import android.support.v7.app.AppCompatDelegate;
 import android.text.format.DateUtils;
 
 import dev.dworks.apps.anexplorer.misc.AnalyticsManager;
+import dev.dworks.apps.anexplorer.misc.CloudStorageUtils;
 import dev.dworks.apps.anexplorer.misc.ContentProviderClientCompat;
 import dev.dworks.apps.anexplorer.misc.RootsCache;
 import dev.dworks.apps.anexplorer.misc.SAFManager;
@@ -110,6 +111,8 @@ public class DocumentsApplication extends Application {
         registerReceiver(mCacheReceiver, localeFilter);
 
         isTelevision = Utils.isTelevision(this);
+
+        CloudStorageUtils.intialize(this);
     }
 
     public static synchronized DocumentsApplication getInstance() {

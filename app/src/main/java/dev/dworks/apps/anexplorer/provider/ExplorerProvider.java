@@ -28,12 +28,16 @@ public class ExplorerProvider extends ContentProvider {
     private static final int URI_BOOKMARK_ID = 2;
     private static final int URI_CONNECTION = 3;
     private static final int URI_CONNECTION_ID = 4;
+    private static final int URI_STORAGE = 5;
+    private static final int URI_STORAGE_ID = 6;
 
     static {
         sMatcher.addURI(AUTHORITY, "bookmark", URI_BOOKMARK);
         sMatcher.addURI(AUTHORITY, "bookmark/*", URI_BOOKMARK_ID);
         sMatcher.addURI(AUTHORITY, "connection", URI_CONNECTION);
         sMatcher.addURI(AUTHORITY, "connection/*", URI_CONNECTION_ID);
+        sMatcher.addURI(AUTHORITY, "storage", URI_STORAGE);
+        sMatcher.addURI(AUTHORITY, "storage/*", URI_STORAGE_ID);
     }
 
     public static final String TABLE_BOOKMARK = "bookmark";
@@ -60,6 +64,19 @@ public class ExplorerProvider extends ContentProvider {
         public static final String ANONYMOUS_LOGIN = "anonymous_login";
     }
 
+    public static final String TABLE_STORAGE = "storage";
+    public static class StorageColumns implements BaseColumns{
+        public static final String NAME = "title";
+        public static final String TYPE = "type";
+        public static final String SCHEME = "scheme";
+        public static final String PATH = "path";
+        public static final String HOST = "host";
+        public static final String PORT = "port";
+        public static final String USERNAME = "username";
+        public static final String PASSWORD = "password";
+        public static final String ANONYMOUS_LOGIN = "anonymous_login";
+    }
+
     public static Uri buildBookmark() {
         return new Uri.Builder().scheme(ContentResolver.SCHEME_CONTENT)
                 .authority(AUTHORITY).appendPath(TABLE_BOOKMARK).build();
@@ -70,6 +87,11 @@ public class ExplorerProvider extends ContentProvider {
                 .authority(AUTHORITY).appendPath(TABLE_CONNECTION).build();
     }
 
+    public static Uri buildStorage() {
+        return new Uri.Builder().scheme(ContentResolver.SCHEME_CONTENT)
+                .authority(AUTHORITY).appendPath(TABLE_STORAGE).build();
+    }
+
     private DatabaseHelper mHelper;
 
     @SuppressWarnings("unused")
@@ -78,6 +100,7 @@ public class ExplorerProvider extends ContentProvider {
         private final Context mContext;
         private static final int VERSION_INIT = 5;
         private static final int VERSION_CONNECTIONS = 6;
+        private static final int VERSION_STORAGE = 7;
 
         public DatabaseHelper(Context context) {
             super(context, DB_NAME, null, VERSION_CONNECTIONS);
@@ -97,6 +120,9 @@ public class ExplorerProvider extends ContentProvider {
                 switch (upgradeTo) {
                     case VERSION_CONNECTIONS:
                         createTablesV2(db);
+                        break;
+                    case VERSION_STORAGE:
+                        createTablesV3(db);
                         break;
                 }
                 upgradeTo++;
@@ -157,6 +183,23 @@ public class ExplorerProvider extends ContentProvider {
 
             addDefaultServer(db);
         }
+
+        private void createTablesV3(SQLiteDatabase db) {
+            db.execSQL("CREATE TABLE " + TABLE_STORAGE + " (" +
+                    BaseColumns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    StorageColumns.NAME + " TEXT," +
+                    StorageColumns.TYPE + " TEXT," +
+                    StorageColumns.SCHEME + " TEXT," +
+                    StorageColumns.PATH + " TEXT," +
+                    StorageColumns.HOST + " TEXT," +
+                    StorageColumns.PORT + " INTEGER," +
+                    StorageColumns.USERNAME + " TEXT," +
+                    StorageColumns.PASSWORD + " TEXT," +
+                    StorageColumns.ANONYMOUS_LOGIN + " BOOLEAN," +
+                    "UNIQUE (" + StorageColumns.NAME + ", " + StorageColumns.HOST + ", " + StorageColumns.PATH +  ") ON CONFLICT REPLACE " +
+                    ")");
+
+        }
     }
 
     public ExplorerProvider() {
@@ -178,6 +221,10 @@ public class ExplorerProvider extends ContentProvider {
                         selectionArgs, null, null, sortOrder);
             case URI_CONNECTION:
                 return db.query(TABLE_CONNECTION, projection, selection,
+                        selectionArgs, null, null, sortOrder);
+
+            case URI_STORAGE:
+                return db.query(TABLE_STORAGE, projection, selection,
                         selectionArgs, null, null, sortOrder);
             default:
                 throw new UnsupportedOperationException("Unsupported Uri " + uri);
@@ -201,6 +248,9 @@ public class ExplorerProvider extends ContentProvider {
                 return uri;
             case URI_CONNECTION:
                 db.insert(TABLE_CONNECTION, null, values);
+
+            case URI_STORAGE:
+                db.insert(TABLE_STORAGE, null, values);
 
                 return uri;
             default:
@@ -248,6 +298,16 @@ public class ExplorerProvider extends ContentProvider {
                         selection,
                         selectionArgs);
 
+            case URI_STORAGE_ID:
+                id = uri.getLastPathSegment();
+                count = db.delete(TABLE_STORAGE,
+                        BaseColumns._ID + "=?",
+                        new String[]{id});
+                break;
+            case URI_STORAGE:
+                count = db.delete(TABLE_STORAGE,
+                        selection,
+                        selectionArgs);
                 break;
             default:
                 throw new UnsupportedOperationException("Unsupported Uri " + uri);
